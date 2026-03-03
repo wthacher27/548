@@ -27,4 +27,7 @@ export class UserService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+  isAdmin(name: string): Observable<boolean> {
+    return this.http.get<boolean>(`${this.baseUrl}/isAdmin/${name}`);
+  }
 }

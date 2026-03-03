@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InjuryService } from '../services/injury.service';
+import { UserService } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-injuries',
@@ -13,7 +15,7 @@ import { InjuryService } from '../services/injury.service';
 
       <form (ngSubmit)="save()">
         <h3>{{ editId ? 'Edit Injury' : 'New Injury' }}</h3>
-        <div class="form-row">
+        <div class="form-row" *ngIf="isAdmin">
           <label>User ID</label>
           <input type="number" [(ngModel)]="form.user" name="user" required />
         </div>
@@ -71,15 +73,28 @@ export class InjuriesComponent implements OnInit {
   injuries: any[] = [];
   editId: number | null = null;
   form: any = {};
+  isAdmin: boolean = false;
+  currentUserId: number | null = null;
 
-  constructor(private injuryService: InjuryService) {}
+  constructor(private injuryService: InjuryService, private userService: UserService, private auth: AuthService) {}
 
   ngOnInit() {
     this.load();
   }
 
   load() {
-    this.injuryService.getAll().subscribe(data => this.injuries = data);
+    const name = this.auth.getUser()?.name;
+    const id = this.auth.getUser()?.id;
+    if (!name) return;
+    this.currentUserId = id;
+    this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      this.isAdmin = isAdmin;
+      if (isAdmin) {
+        this.injuryService.getAll().subscribe(data => this.injuries = data);
+      } else {
+        this.injuryService.getByUser(id).subscribe(data => this.injuries = data);
+      }
+    });
   }
 
   edit(injury: any) {
@@ -99,6 +114,7 @@ export class InjuriesComponent implements OnInit {
         this.cancelEdit();
       });
     } else {
+      if (!this.isAdmin) this.form.user = this.currentUserId;
       this.injuryService.create(this.form).subscribe(() => {
         this.load();
         this.form = {};

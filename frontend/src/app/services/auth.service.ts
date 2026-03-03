@@ -26,6 +26,7 @@ export class AuthService {
   }
 
   getUser(): any {
+    console.log(this.currentUser);
     return this.currentUser;
   }
 

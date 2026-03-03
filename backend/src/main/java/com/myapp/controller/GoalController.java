@@ -3,6 +3,7 @@ package com.myapp.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,11 +14,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.myapp.model.Goal;
 import com.myapp.repository.GoalRepository;
 
-@CrossOrigin(origins = "http://localhost:4200")
+import jakarta.servlet.http.HttpSession;
+
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4000"}, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/goals")
 public class GoalController {
@@ -25,20 +29,34 @@ public class GoalController {
     private GoalRepository goalRepository;
 
     @GetMapping
-    public List<Goal> getAllGoals() {
-        return goalRepository.findAll();
+    public List<Goal> getAllGoals(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return goalRepository.findAll();
+        return goalRepository.findByUser(userId.longValue());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Goal> getGoal(@PathVariable Long id) {
+    public ResponseEntity<Goal> getGoal(@PathVariable Long id, HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) {
+            return goalRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+        }
         return goalRepository.findById(id)
+            .filter(g -> g.getUser().equals(userId.longValue()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/user/{userId}")
-    public List<Goal> getGoalsByUser(@PathVariable Long userId) {
-        return goalRepository.findByUser(userId);
+    public List<Goal> getGoalsByUser(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return goalRepository.findAll();
+        return goalRepository.findByUser(userId.longValue());
     }
 
     @PostMapping

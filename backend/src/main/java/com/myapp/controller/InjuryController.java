@@ -3,6 +3,7 @@ package com.myapp.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,11 +14,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.myapp.model.Injury;
 import com.myapp.repository.InjuryRepository;
 
-@CrossOrigin(origins = "http://localhost:4200")
+import jakarta.servlet.http.HttpSession;
+
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4000"}, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/injuries")
 public class InjuryController {
@@ -25,20 +29,34 @@ public class InjuryController {
     private InjuryRepository injuryRepository;
 
     @GetMapping
-    public List<Injury> getAllInjuries() {
-        return injuryRepository.findAll();
+    public List<Injury> getAllInjuries(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return injuryRepository.findAll();
+        return injuryRepository.findByUser(userId.longValue());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Injury> getInjury(@PathVariable Long id) {
+    public ResponseEntity<Injury> getInjury(@PathVariable Long id, HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) {
+            return injuryRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+        }
         return injuryRepository.findById(id)
+            .filter(i -> i.getUser().equals(userId.longValue()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/user/{userId}")
-    public List<Injury> getInjuriesByUser(@PathVariable Long userId) {
-        return injuryRepository.findByUser(userId);
+    public List<Injury> getInjuriesByUser(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return injuryRepository.findAll();
+        return injuryRepository.findByUser(userId.longValue());
     }
 
     @PostMapping

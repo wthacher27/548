@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-users',
@@ -11,11 +13,11 @@ import { UserService } from '../services/user.service';
     <div class="container">
       <h2>Users</h2>
 
-      <form (ngSubmit)="save()" #f="ngForm">
+      <form *ngIf="isAdmin || editId" (ngSubmit)="save()" #f="ngForm">
         <h3>{{ editId ? 'Edit User' : 'New User' }}</h3>
         <div class="form-row">
-          <label>Name</label>
-          <input [(ngModel)]="form.name" name="name" required />
+          <label>Username</label>
+          <input [(ngModel)]="form.name" name="name" required [disabled]="!!editId" />
         </div>
         <div class="form-row">
           <label>Age</label>
@@ -54,7 +56,7 @@ import { UserService } from '../services/user.service';
       <table>
         <thead>
           <tr>
-            <th>ID</th><th>Name</th><th>Age</th><th>Height</th><th>Weight</th><th>Body Fat</th><th>Experience</th><th>Actions</th>
+            <th>ID</th><th>Username</th><th>Age</th><th>Height</th><th>Weight</th><th>Body Fat</th><th>Experience</th><th>Birthday</th><th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -66,6 +68,7 @@ import { UserService } from '../services/user.service';
             <td>{{ u.weightLbs }} lbs</td>
             <td>{{ u.bodyFat }}%</td>
             <td>{{ u.experience }} yrs</td>
+            <td>{{ u.birthday }}</td>
             <td>
               <button (click)="edit(u)">Edit</button>
               <button class="danger" (click)="delete(u.id)">Delete</button>
@@ -94,15 +97,26 @@ export class UsersComponent implements OnInit {
   users: any[] = [];
   editId: number | null = null;
   form: any = {};
+  isAdmin: boolean = false;
 
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService, private auth: AuthService, private router: Router) {}
 
   ngOnInit() {
     this.load();
   }
 
   load() {
-    this.userService.getAll().subscribe(data => this.users = data);
+    const name = this.auth.getUser()?.name;
+    const id = this.auth.getUser()?.id;
+    if (!name) return;
+    this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      this.isAdmin = isAdmin;
+      if (isAdmin) {
+        this.userService.getAll().subscribe(data => this.users = data);
+      } else {
+        this.userService.getUser(id).subscribe(data => this.users = [data]);
+      }
+    });
   }
 
   edit(user: any) {
@@ -117,14 +131,26 @@ export class UsersComponent implements OnInit {
 
   save() {
     if (this.editId) {
-      this.userService.update(this.editId, this.form).subscribe(() => {
-        this.load();
-        this.cancelEdit();
+      this.userService.update(this.editId, this.form).subscribe({
+        next: () => {
+          this.load();
+          this.cancelEdit();
+        },
+        error: (err) => {
+          console.error('Update failed', err);
+          alert('Update failed: ' + (err.error?.message || JSON.stringify(err.error) || err.message));
+        }
       });
     } else {
-      this.userService.create(this.form).subscribe(() => {
-        this.load();
-        this.form = {};
+      this.userService.create(this.form).subscribe({
+        next: () => {
+          this.load();
+          this.form = {};
+        },
+        error: (err) => {
+          console.error('Create failed', err);
+          alert('Create failed: ' + (err.error || err.message));
+        }
       });
     }
   }
@@ -132,6 +158,11 @@ export class UsersComponent implements OnInit {
   delete(id: number) {
     if (confirm('Delete this user?')) {
       this.userService.delete(id).subscribe(() => this.load());
+      if(!this.isAdmin) {
+        this.auth.logout();
+        this.router.navigate(['/login']);
+      }
+      
     }
   }
 }

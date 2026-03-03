@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExerciseService } from '../services/exercise.service';
+import { UserService } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-exercises',
@@ -86,15 +88,21 @@ export class ExercisesComponent implements OnInit {
   exercises: any[] = [];
   editId: number | null = null;
   form: any = {};
+  isAdmin: boolean = false;
 
-  constructor(private exerciseService: ExerciseService) {}
+  constructor(private exerciseService: ExerciseService, private userService: UserService, private auth: AuthService) {}
 
   ngOnInit() {
     this.load();
   }
 
   load() {
-    this.exerciseService.getAll().subscribe(data => this.exercises = data);
+    const name = this.auth.getUser()?.name;
+    if (!name) return;
+    this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      this.isAdmin = isAdmin;
+      this.exerciseService.getAll().subscribe(data => this.exercises = data);
+    });
   }
 
   edit(exercise: any) {

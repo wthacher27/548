@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkoutService } from '../services/workout.service';
+import { UserService } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-workouts',
@@ -13,7 +15,7 @@ import { WorkoutService } from '../services/workout.service';
 
       <form (ngSubmit)="save()">
         <h3>{{ editId ? 'Edit Workout' : 'New Workout' }}</h3>
-        <div class="form-row">
+        <div class="form-row" *ngIf="isAdmin">
           <label>User ID</label>
           <input type="number" [(ngModel)]="form.user" name="user" required />
         </div>
@@ -88,15 +90,28 @@ export class WorkoutsComponent implements OnInit {
   workouts: any[] = [];
   editId: number | null = null;
   form: any = {};
+  isAdmin: boolean = false;
+  currentUserId: number | null = null;
 
-  constructor(private workoutService: WorkoutService) {}
+  constructor(private workoutService: WorkoutService, private userService: UserService, private auth: AuthService) {}
 
   ngOnInit() {
     this.load();
   }
 
   load() {
-    this.workoutService.getAll().subscribe(data => this.workouts = data);
+    const name = this.auth.getUser()?.name;
+    const id = this.auth.getUser()?.id;
+    if (!name) return;
+    this.currentUserId = id;
+    this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      this.isAdmin = isAdmin;
+      if (isAdmin) {
+        this.workoutService.getAll().subscribe(data => this.workouts = data);
+      } else {
+        this.workoutService.getByUser(id).subscribe(data => this.workouts = data);
+      }
+    });
   }
 
   edit(workout: any) {
@@ -116,6 +131,7 @@ export class WorkoutsComponent implements OnInit {
         this.cancelEdit();
       });
     } else {
+      if (!this.isAdmin) this.form.user = this.currentUserId;
       this.workoutService.create(this.form).subscribe(() => {
         this.load();
         this.form = {};

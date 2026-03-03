@@ -21,8 +21,8 @@ import { AuthService } from '../services/auth.service';
         <!-- Login Form -->
         <form *ngIf="mode === 'login'" (ngSubmit)="login()">
           <div class="field">
-            <label>Name</label>
-            <input [(ngModel)]="loginForm.name" name="name" placeholder="Your name" required />
+            <label>Username</label>
+            <input [(ngModel)]="loginForm.name" name="name" placeholder="Your username" required />
           </div>
           <div class="field">
             <label>Password</label>
@@ -35,8 +35,8 @@ import { AuthService } from '../services/auth.service';
         <!-- Register Form -->
         <form *ngIf="mode === 'register'" (ngSubmit)="register()">
           <div class="field">
-            <label>Name <span class="req">*</span></label>
-            <input [(ngModel)]="regForm.name" name="name" placeholder="Full name" required />
+            <label>Username <span class="req">*</span></label>
+            <input [(ngModel)]="regForm.name" name="name" placeholder="Choose a username" required />
           </div>
           <div class="field">
             <label>Password <span class="req">*</span></label>
@@ -168,7 +168,7 @@ export class LoginComponent {
     this.error = '';
     this.auth.login(this.loginForm.name, this.loginForm.password).subscribe({
       next: () => this.router.navigate(['/users']),
-      error: () => this.error = 'Invalid name or password.'
+      error: () => this.error = 'Invalid username or password.'
     });
   }
 
@@ -176,7 +176,7 @@ export class LoginComponent {
     this.error = '';
     this.auth.register(this.regForm).subscribe({
       next: () => this.router.navigate(['/users']),
-      error: () => this.error = 'Could not create account. Please try again.'
+      error: (err: any) => this.error = err.status === 409 ? 'Username already taken.' : 'Could not create account. Please try again.'
     });
   }
 }

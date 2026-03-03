@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Positive;
 
 @Entity
 @Table(name = "APPUSER")
@@ -16,12 +17,14 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    @Column(name = "NAME", nullable = false)
+    @Column(name = "NAME", nullable = false, unique = true)
     private String name;
 
+    @Positive(message = "Height must be greater than 0")
     @Column(name = "HEIGHT_IN")
     private Float heightIn;
 
+    @Positive(message = "Weight must be greater than 0")
     @Column(name = "WEIGHT_LBS")
     private Float weightLbs;
 
@@ -31,6 +34,7 @@ public class User {
     @Column(name = "EXPERIENCE")
     private Integer experience;
 
+    @Positive(message = "Age must be greater than 0")
     @Column(name = "AGE")
     private Integer age;
 
@@ -70,7 +74,7 @@ public class User {
     }
 
     public Float getHeightIn() {
-        return heightIn;
+        return heightIn != null ? heightIn : 1f;
     }
 
     public void setHeightIn(Float heightIn) {
@@ -78,7 +82,7 @@ public class User {
     }
 
     public Float getWeightLbs() {
-        return weightLbs;
+        return weightLbs != null ? weightLbs : 1f;
     }
 
     public void setWeightLbs(Float weightLbs) {
@@ -86,7 +90,7 @@ public class User {
     }
 
     public Float getBodyFat() {
-        return bodyFat;
+        return bodyFat != null ? bodyFat : 1f;
     }
 
     public void setBodyFat(Float bodyFat) {
@@ -94,7 +98,7 @@ public class User {
     }
 
     public int getExperience() {
-        return experience;
+        return experience != null ? experience : 1;
     }
 
     public void setExperience(int experience) {
@@ -102,7 +106,7 @@ public class User {
     }
 
     public int getAge() {
-        return age;
+        return age != null ? age : 0;
     }
 
     public void setAge(int age) {

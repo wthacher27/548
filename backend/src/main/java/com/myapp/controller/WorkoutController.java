@@ -3,6 +3,7 @@ package com.myapp.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,11 +14,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.myapp.model.Workout;
 import com.myapp.repository.WorkoutRepository;
 
-@CrossOrigin(origins = "http://localhost:4200")
+import jakarta.servlet.http.HttpSession;
+
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4000"}, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/workouts")
 public class WorkoutController {
@@ -25,20 +29,34 @@ public class WorkoutController {
     private WorkoutRepository workoutRepository;
 
     @GetMapping
-    public List<Workout> getAllWorkouts() {
-        return workoutRepository.findAll();
+    public List<Workout> getAllWorkouts(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return workoutRepository.findAll();
+        return workoutRepository.findByUser(userId.longValue());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Workout> getWorkout(@PathVariable Long id) {
+    public ResponseEntity<Workout> getWorkout(@PathVariable Long id, HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) {
+            return workoutRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+        }
         return workoutRepository.findById(id)
+            .filter(w -> w.getUser().equals(userId.longValue()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/user/{userId}")
-    public List<Workout> getWorkoutsByUser(@PathVariable Long userId) {
-        return workoutRepository.findByUser(userId);
+    public List<Workout> getWorkoutsByUser(HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (Boolean.TRUE.equals(session.getAttribute("isAdmin"))) return workoutRepository.findAll();
+        return workoutRepository.findByUser(userId.longValue());
     }
 
     @PostMapping

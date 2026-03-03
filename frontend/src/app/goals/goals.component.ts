@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GoalService } from '../services/goal.service';
+import { UserService } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-goals',
@@ -13,7 +15,7 @@ import { GoalService } from '../services/goal.service';
 
       <form (ngSubmit)="save()">
         <h3>{{ editId ? 'Edit Goal' : 'New Goal' }}</h3>
-        <div class="form-row">
+        <div class="form-row" *ngIf="isAdmin">
           <label>User ID</label>
           <input type="number" [(ngModel)]="form.user" name="user" required />
         </div>
@@ -71,15 +73,28 @@ export class GoalsComponent implements OnInit {
   goals: any[] = [];
   editId: number | null = null;
   form: any = {};
+  isAdmin: boolean = false;
+  currentUserId: number | null = null;
 
-  constructor(private goalService: GoalService) {}
+  constructor(private goalService: GoalService, private userService: UserService, private auth: AuthService) {}
 
   ngOnInit() {
     this.load();
   }
 
   load() {
-    this.goalService.getAll().subscribe(data => this.goals = data);
+    const name = this.auth.getUser()?.name;
+    const id = this.auth.getUser()?.id;
+    if (!name) return;
+    this.currentUserId = id;
+    this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      this.isAdmin = isAdmin;
+      if (isAdmin) {
+        this.goalService.getAll().subscribe(data => this.goals = data);
+      } else {
+        this.goalService.getByUser(id).subscribe(data => this.goals = data);
+      }
+    });
   }
 
   edit(goal: any) {
@@ -99,6 +114,7 @@ export class GoalsComponent implements OnInit {
         this.cancelEdit();
       });
     } else {
+      if (!this.isAdmin) this.form.user = this.currentUserId;
       this.goalService.create(this.form).subscribe(() => {
         this.load();
         this.form = {};

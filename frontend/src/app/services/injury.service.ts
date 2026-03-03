@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class InjuryService {
-  private baseUrl = 'http://localhost:8080/injuries';
+  private baseUrl = 'http://localhost:8080/api/injuries';
 
   constructor(private http: HttpClient) {}
 
