@@ -23,7 +23,7 @@ import com.myapp.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -63,9 +63,12 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody User user) {
+    public ResponseEntity<?> createUser(@Valid @RequestBody User user, HttpSession session) {
         try {
-            return ResponseEntity.ok(userRepository.save(user));
+            User saved = userRepository.save(user);
+            session.setAttribute("userId", saved.getId());
+            session.setAttribute("isAdmin", adminName.equals(saved.getName()));
+            return ResponseEntity.ok(saved);
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(409).body("Username already taken.");
         }

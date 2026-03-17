@@ -105,6 +105,7 @@ export class WorkoutsComponent implements OnInit {
     if (!name) return;
     this.currentUserId = id;
     this.userService.isAdmin(name).subscribe((isAdmin: boolean) => {
+      console.log(this.isAdmin = isAdmin)
       this.isAdmin = isAdmin;
       if (isAdmin) {
         this.workoutService.getAll().subscribe(data => this.workouts = data);
